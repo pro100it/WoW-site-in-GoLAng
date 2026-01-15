@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - WoW Server</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        wow: {
+                            alliance: '#0078ff',
+                            horde: '#c41f3b',
+                            gold: '#ffd100'
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/loading-states.js"></script>
+    
+    <!-- Alpine.js для интерактивности -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Иконки -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .wow-gradient {
+            background: linear-gradient(135deg, #0a0e17 0%, #1a1f2e 100%);
+        }
+        .alliance-gradient {
+            background: linear-gradient(135deg, #0051ba 0%, #0078ff 100%);
+        }
+        .horde-gradient {
+            background: linear-gradient(135deg, #8b0000 0%, #c41f3b 100%);
+        }
+        .gold-gradient {
+            background: linear-gradient(135deg, #d4af37 0%, #ffd100 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        .glow {
+            box-shadow: 0 0 20px rgba(0, 120, 255, 0.3);
+        }
+        .typewriter {
+            overflow: hidden;
+            border-right: .15em solid #ffd100;
+            white-space: nowrap;
+            animation: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+        }
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #ffd100; }
+        }
+    </style>
+</head>
+<body class="wow-gradient text-gray-100 min-h-screen">
+    <!-- Навигация -->
+    <nav class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <img src="/static/images/wow-logo.png" alt="WoW Logo" class="h-10 w-10">
+                    <span class="text-xl font-bold text-wow-gold">
+                        <i class="fas fa-crown mr-2"></i>
+                        {{if .Config.Game.RealmList}}
+                            {{.Config.Game.RealmList}}
+                        {{else}}
+                            WoW Server
+                        {{end}}
+                    </span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="/" class="hover:text-wow-gold transition">
+                        <i class="fas fa-home mr-2"></i>Home
+                    </a>
+                    <a href="#register" class="hover:text-wow-gold transition">
+                        <i class="fas fa-user-plus mr-2"></i>Register
+                    </a>
+                    <a href="/players" class="hover:text-wow-gold transition">
+                        <i class="fas fa-users mr-2"></i>Players
+                    </a>
+                    <a href="/status" class="hover:text-wow-gold transition">
+                        <i class="fas fa-chart-bar mr-2"></i>Status
+                    </a>
+                    <a href="/rules" class="hover:text-wow-gold transition">
+                        <i class="fas fa-scroll mr-2"></i>Rules
+                    </a>
+                </div>
+                
+                <button @click="mobileMenu = !mobileMenu" class="md:hidden text-wow-gold">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+            
+            <!-- Мобильное меню -->
+            <div x-show="mobileMenu" class="mt-4 md:hidden" x-transition>
+                <div class="flex flex-col space-y-3">
+                    <a href="/" class="hover:text-wow-gold transition py-2">
+                        <i class="fas fa-home mr-2"></i>Home
+                    </a>
+                    <a href="#register" class="hover:text-wow-gold transition py-2">
+                        <i class="fas fa-user-plus mr-2"></i>Register
+                    </a>
+                    <a href="/players" class="hover:text-wow-gold transition py-2">
+                        <i class="fas fa-users mr-2"></i>Players
+                    </a>
+                    <a href="/status" class="hover:text-wow-gold transition py-2">
+                        <i class="fas fa-chart-bar mr-2"></i>Status
+                    </a>
+                    <a href="/rules" class="hover:text-wow-gold transition py-2">
+                        <i class="fas fa-scroll mr-2"></i>Rules
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="py-16 px-4">
+        <div class="container mx-auto text-center">
+            <div class="typewriter inline-block mb-4">
+                <h1 class="text-5xl md:text-6xl font-bold mb-4">
+                    Welcome to <span class="text-wow-gold">World of Warcraft</span>
+                </h1>
+            </div>
+            
+            <p class="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+                Join thousands of players in the ultimate Wrath of the Lich King experience.
+                Register now and begin your adventure in Azeroth!
+            </p>
+            
+            <!-- Статистика в реальном времени -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto"
+                 hx-get="/htmx/server-stats"
+                 hx-trigger="load, every 30s"
+                 hx-swap="outerHTML">
+                <!-- HTMX загрузит статистику здесь -->
+                <div class="animate-pulse">
+                    <div class="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                        <div class="h-4 bg-gray-700 rounded w-1/2 mb-4"></div>
+                        <div class="h-8 bg-gray-700 rounded w-3/4"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="#register" 
+               class="inline-block gold-gradient text-white font-bold py-4 px-8 rounded-full text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                <i class="fas fa-play mr-2"></i> Start Your Journey
+            </a>
+        </div>
+    </section>
+
+    <!-- Основной контент -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Левая колонка: Регистрация -->
+            <div class="lg:col-span-2">
+                <div id="register" class="bg-gray-900/60 backdrop-blur-sm rounded-2xl border border-gray-800 p-8 mb-8 glow">
+                    <h2 class="text-3xl font-bold mb-6 text-wow-gold">
+                        <i class="fas fa-user-plus mr-3"></i>Create Your Account
+                    </h2>
+                    
+                    <!-- Форма регистрации -->
+                    <form id="registration-form" 
+                          hx-post="/api/register"
+                          hx-target="#registration-result"
+                          hx-swap="innerHTML"
+                          class="space-y-6">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Username -->
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    <i class="fas fa-user mr-2"></i>Username *
+                                </label>
+                                <input type="text" 
+                                       name="username"
+                                       required
+                                       hx-post="/htmx/validate/username"
+                                       hx-trigger="keyup changed delay:500ms"
+                                       hx-target="#username-error"
+                                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-wow-gold focus:ring-2 focus:ring-wow-gold/30 transition"
+                                       placeholder="Enter your username">
+                                <div id="username-error" class="mt-2"></div>
+                            </div>
+                            
+                            <!-- Email -->
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    <i class="fas fa-envelope mr-2"></i>Email Address *
+                                </label>
+                                <input type="email" 
+                                       name="email"
+                                       required
+                                       hx-post="/htmx/validate/email"
+                                       hx-trigger="keyup changed delay:500ms"
+                                       hx-target="#email-error"
+                                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-wow-gold focus:ring-2 focus:ring-wow-gold/30 transition"
+                                       placeholder="your@email.com">
+                                <div id="email-error" class="mt-2"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Password -->
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    <i class="fas fa-lock mr-2"></i>Password *
+                                </label>
+                                <input type="password" 
+                                       name="password"
+                                       required
+                                       hx-post="/api/validate"
+                                       hx-trigger="keyup changed delay:500ms"
+                                       hx-target="#password-validation"
+                                       hx-include="[name='username'], [name='email']"
+                                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-wow-gold focus:ring-2 focus:ring-wow-gold/30 transition"
+                                       placeholder="Minimum 4 characters">
+                                <div id="password-validation" class="mt-2"></div>
+                            </div>
+                            
+                            <!-- Confirm Password -->
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    <i class="fas fa-lock mr-2"></i>Confirm Password *
+                                </label>
+                                <input type="password" 
+                                       name="confirm_password"
+                                       required
+                                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-wow-gold focus:ring-2 focus:ring-wow-gold/30 transition"
+                                       placeholder="Repeat your password">
+                            </div>
+                        </div>
+                        
+                        <!-- Terms -->
+                        <div class="flex items-start">
+                            <input type="checkbox" 
+                                   name="terms"
+                                   required
+                                   class="mt-1 mr-3 rounded bg-gray-800 border-gray-700 text-wow-gold focus:ring-wow-gold">
+                            <label class="text-sm text-gray-300">
+                                I agree to the <a href="/rules" class="text-wow-gold hover:underline">server rules</a> and 
+                                <a href="/privacy" class="text-wow-gold hover:underline">privacy policy</a>. 
+                                I confirm that I am at least 13 years old.
+                            </label>
+                        </div>
+                        
+                        <!-- Капча -->
+                        {{if .Config.Security.EnableCaptcha}}
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <div class="h-captcha" data-sitekey="{{.Config.Security.CaptchaSiteKey}}"></div>
+                            <script src="https://hcaptcha.com/1/api.js" async defer></script>
+                        </div>
+                        {{end}}
+                        
+                        <!-- Submit -->
+                        <button type="submit"
+                                class="w-full gold-gradient text-white font-bold py-4 px-6 rounded-lg hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 flex items-center justify-center"
+                                hx-indicator="#spinner">
+                            <i class="fas fa-user-plus mr-3"></i>
+                            <span id="submit-text">Create Account</span>
+                            <div id="spinner" class="htmx-indicator ml-3">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                        </button>
+                        
+                        <!-- Результат -->
+                        <div id="registration-result" class="mt-4"></div>
+                    </form>
+                    
+                    <!-- Быстрая инструкция -->
+                    <div class="mt-8 pt-8 border-t border-gray-800">
+                        <h3 class="text-xl font-bold mb-4">
+                            <i class="fas fa-rocket mr-2"></i>Quick Start Guide
+                        </h3>
+                        <ol class="list-decimal pl-5 space-y-2 text-gray-300">
+                            <li>Download the WoW WotLK 3.3.5a client</li>
+                            <li>Open <code class="bg-gray-800 px-2 py-1 rounded">realmlist.wtf</code> in your Data folder</li>
+                            <li>Add: <code class="bg-gray-800 px-2 py-1 rounded">set realmlist {{.Config.Game.RealmList}}</code></li>
+                            <li>Save the file and launch WoW</li>
+                            <li>Use your newly created account to login!</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Правая колонка: Информация -->
+            <div class="space-y-8">
+                <!-- Онлайн игроки -->
+                <div class="bg-gray-900/60 backdrop-blur-sm rounded-2xl border border-gray-800 p-6">
+                    <h3 class="text-2xl font-bold mb-4 text-wow-gold">
+                        <i class="fas fa-users mr-2"></i>Online Now
+                    </h3>
+                    <div id="online-players"
+                         hx-get="/htmx/online-players"
+                         hx-trigger="load, every 15s"
+                         hx-swap="innerHTML">
+                        <div class="animate-pulse space-y-3">
+                            {{range .OnlinePlayers}}
+                            <div class="flex items-center justify-between">
+                                <div class="h-4 bg-gray-800 rounded w-3/4"></div>
+                                <div class="h-4 bg-gray-800 rounded w-1/4"></div>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Серверная информация -->
+                <div class="bg-gray-900/60 backdrop-blur-sm rounded-2xl border border-gray-800 p-6">
+                    <h3 class="text-2xl font-bold mb-4 text-wow-gold">
+                        <i class="fas fa-server mr-2"></i>Server Info
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Version:</span>
+                            <span class="font-bold">WotLK 3.3.5a</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Expansion:</span>
+                            <span class="font-bold">Wrath of the Lich King</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Type:</span>
+                            <span class="font-bold">Blizzlike PvE</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Rates:</span>
+                            <span class="font-bold">x1 Experience</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Locale:</span>
+                            <span class="font-bold">Russian/English</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Быстрые ссылки -->
+                <div class="bg-gray-900/60 backdrop-blur-sm rounded-2xl border border-gray-800 p-6">
+                    <h3 class="text-2xl font-bold mb-4 text-wow-gold">
+                        <i class="fas fa-link mr-2"></i>Quick Links
+                    </h3>
+                    <div class="space-y-3">
+                        <a href="https://discord.gg/example" 
+                           target="_blank"
+                           class="flex items-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition group">
+                            <i class="fab fa-discord text-purple-500 mr-3 text-xl"></i>
+                            <span class="group-hover:text-wow-gold transition">Join Discord</span>
+                        </a>
+                        <a href="https://github.com/example" 
+                           target="_blank"
+                           class="flex items-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition group">
+                            <i class="fab fa-github text-gray-300 mr-3 text-xl"></i>
+                            <span class="group-hover:text-wow-gold transition">GitHub</span>
+                        </a>
+                        <a href="/download" 
+                           class="flex items-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition group">
+                            <i class="fas fa-download text-blue-500 mr-3 text-xl"></i>
+                            <span class="group-hover:text-wow-gold transition">Download Client</span>
+                        </a>
+                        <a href="/faq" 
+                           class="flex items-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition group">
+                            <i class="fas fa-question-circle text-green-500 mr-3 text-xl"></i>
+                            <span class="group-hover:text-wow-gold transition">FAQ & Help</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Футер -->
+    <footer class="bg-gray-900/80 border-t border-gray-800 mt-16">
+        <div class="container mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h4 class="text-xl font-bold mb-4 text-wow-gold">WoW Server</h4>
+                    <p class="text-gray-400">
+                        Experience World of Warcraft: Wrath of the Lich King 
+                        with a dedicated community and stable server.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold mb-4 text-wow-gold">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="/" class="text-gray-400 hover:text-wow-gold transition">Home</a></li>
+                        <li><a href="/register" class="text-gray-400 hover:text-wow-gold transition">Register</a></li>
+                        <li><a href="/rules" class="text-gray-400 hover:text-wow-gold transition">Rules</a></li>
+                        <li><a href="/status" class="text-gray-400 hover:text-wow-gold transition">Server Status</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold mb-4 text-wow-gold">Connect</h4>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-wow-gold text-xl">
+                            <i class="fab fa-discord"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-wow-gold text-xl">
+                            <i class="fab fa-telegram"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-wow-gold text-xl">
+                            <i class="fab fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500">
+                <p>&copy; {{now.Format "2006"}} WoW Server. World of Warcraft is a registered trademark of Blizzard Entertainment.</p>
+                <p class="text-sm mt-2">This server is not affiliated with or endorsed by Blizzard Entertainment.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Alpine.js data -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('app', () => ({
+                mobileMenu: false,
+                darkMode: true,
+                
+                init() {
+                    // Автоматическая проверка формы
+                    const form = document.getElementById('registration-form');
+                    form.addEventListener('submit', (e) => {
+                        const password = form.querySelector('[name="password"]').value;
+                        const confirm = form.querySelector('[name="confirm_password"]').value;
+                        
+                        if (password !== confirm) {
+                            e.preventDefault();
+                            alert('Passwords do not match!');
+                        }
+                    });
+                    
+                    // Обновление статистики каждые 30 секунд
+                    setInterval(() => {
+                        htmx.trigger('#online-players', 'every-15s');
+                    }, 15000);
+                },
+                
+                copyRealmlist() {
+                    const realmlist = "set realmlist {{.Config.Game.RealmList}}";
+                    navigator.clipboard.writeText(realmlist).then(() => {
+                        alert('Realmlist copied to clipboard!');
+                    });
+                }
+            }));
+        });
+    </script>
+    
+    <!-- HTMX конфигурация -->
+    <script>
+        // Глобальные обработчики HTMX
+        htmx.on('htmx:beforeRequest', (e) => {
+            // Показываем индикатор загрузки
+            const target = e.detail.target;
+            if (target) {
+                target.classList.add('opacity-50');
+            }
+        });
+        
+        htmx.on('htmx:afterRequest', (e) => {
+            // Скрываем индикатор загрузки
+            const target = e.detail.target;
+            if (target) {
+                target.classList.remove('opacity-50');
+            }
+        });
+        
+        // Обработка успешной регистрации
+        htmx.on('htmx:afterOnLoad', (e) => {
+            if (e.detail.pathInfo.requestPath === '/api/register') {
+                const response = JSON.parse(e.detail.xhr.responseText);
+                if (response.success) {
+                    // Показываем успешное сообщение
+                    const form = document.getElementById('registration-form');
+                    if (form) {
+                        form.innerHTML = `
+                            <div class="text-center py-12">
+                                <i class="fas fa-check-circle text-green-500 text-6xl mb-6"></i>
+                                <h3 class="text-2xl font-bold mb-4">Account Created Successfully!</h3>
+                                <p class="text-gray-300 mb-6">
+                                    Your account <strong>${response.account.username}</strong> has been created.
+                                    Check your email for confirmation.
+                                </p>
+                                <button onclick="window.location.href='/'"
+                                        class="gold-gradient text-white font-bold py-3 px-6 rounded-lg">
+                                    Return to Home
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
